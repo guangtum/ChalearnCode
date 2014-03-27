@@ -1,0 +1,11 @@
+import cv2
+from ChalearnLAPSample import GestureSample
+
+gestureSample = GestureSample("Samplexxxx.zip")
+cv2.namedWindow("Samplexxxx",cv2.WINDOW_NORMAL)
+for x in range(1, gestureSamle.getNumFrames()):
+img=gestureSample.getComposedFrame(x)
+cv2.imshow("Samplexxxx",img)
+cv2.waitKey(1)
+del gestureSample
+cv2.destroyAllWindows() 

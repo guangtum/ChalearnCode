@@ -1,0 +1,120 @@
+function [tempdatalabel,mhiannotation]=read_mhisegmentationdata(modalityData,config)
+
+% read mhi data from the skeleton data
+framenum=modalityData.framenum;
+jointsnum=length(config.seg.smh.seljoints);
+skeletondata=modalityData.sampleskele;
+annotation=modalityData.sampleanno;
+spacefeat=config.seg.smh.fspace;
+gapfeat=config.seg.smh.fgap;
+% align the skeleton so that all the skeleton has the same hip center (0,0,0)
+for s=1:framenum
+    aligS=[];
+    center= [skeletondata{s,1}.worldcoord(1),skeletondata{s,1}.worldcoord(2),skeletondata{s,1}.worldcoord(3)];
+    for jo=1:jointsnum
+        aligS=[aligS; skeletondata{s,jo}.worldcoord(1)-center(1) skeletondata{s,jo}.worldcoord(2)-center(2) skeletondata{s,jo}.worldcoord(3)-center(3)];
+    end
+    skealign{s}=aligS;      
+end
+mhiannotation=zeros(1,framenum);
+% get a very simple model to detect the start and end point of the gestures
+% we use the right and left hand different model
+lrannotation= right_left_annotation(modalityData);
+count=0;
+templabel=[];
+tempdata=[];
+for i=(spacefeat+1):(framenum-1-spacefeat) % drop the last frame (it is OK)
+    if skeletondata{i-spacefeat,1}.imagecoord(1) == 0 && skeletondata{i-spacefeat,1}.imagecoord(2)== 0  % drop the first several frames, because there are zeros.
+        continue;
+    end        
+    for si =i-spacefeat:i+spacefeat
+        tempskeinfo.align{si-i+spacefeat+1}=skealign{si};                    % get the x y x positions under world coordinates
+        tempskeinfo.rotat{si-i+spacefeat+1}=skeletondata{si,1}.rpyangle;  % get the yaw pitch roll rotation angles
+    end
+    % frame as the center class 
+    if annotation(i)>0 && length(find(annotation(i-spacefeat:i)>0))> 1+gapfeat && length(find(annotation(i:i+spacefeat)>0))> 1+gapfeat
+            count=count+1;
+            tempdata(:,count)=compute_mhifeature(tempskeinfo,config);
+            templabel(count)=4;
+            mhiannotation(i)=templabel(count);    % frame as the start class
+    elseif (length(find(annotation(i-spacefeat:i)>0))>0 && length(find(annotation(i-spacefeat:i)>0))<= 1+gapfeat && length(find(annotation(i:i+spacefeat)>0))>=spacefeat-gapfeat+1) ||...
+           (length(find(annotation(i-spacefeat:i)>0))==0 && length(find(annotation(i:i+spacefeat)>0))>=spacefeat-gapfeat+1)
+            count=count+1;
+            tempdata(:,count)=compute_mhifeature(tempskeinfo,config);
+            templabel(count)=2;
+            mhiannotation(i)=templabel(count);    % frame as the end class    
+    elseif (length(find(annotation(i:i+spacefeat)>0))<= 1+gapfeat && length(find(annotation(i:i+spacefeat)>0))> 0 && length(find(annotation(i-spacefeat:i)>0))>=spacefeat-gapfeat+1) ||...
+           (length(find(annotation(i:i+spacefeat:i)>0))==0 && length(find(annotation(i-spacefeat:i)>0))>=spacefeat-gapfeat+1)        
+            count=count+1;
+            tempdata(:,count)=compute_mhifeature(tempskeinfo,config);
+            templabel(count)=3;
+            mhiannotation(i)=templabel(count); % frame as the no gesture class   
+    elseif annotation(i)==0 && length(find(annotation(i-spacefeat:i+spacefeat)>0))<=spacefeat-gapfeat ...
+            && lrannotation(i)==0 && length(find(lrannotation(i-spacefeat:i+spacefeat)>0))<=spacefeat-gapfeat
+            count=count+1;
+            tempdata(:,count)=compute_mhifeature(tempskeinfo,config);
+            templabel(count)=1;
+            mhiannotation(i)=templabel(count);
+    end 
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % but we need to consider that some subjects perform gestures that are
+    % not included into 20 gestures, but they belongs to center class.
+end
+tempdatalabel=[templabel;tempdata];
+end
+
+function fina_xyz=compute_mhifeature(tempskeinfo,config)
+
+skespacexyzpos=tempskeinfo.align;
+skespacexyzrot=tempskeinfo.rotat;
+spacefeat=config.seg.smh.fspace;
+
+%% feature xyz 3D position
+max_xyzpos=[]; % rows: 3(X,YZ)xspacefeat*2   e.g.  3*6*2=36 + 36 + 1 +1 + 1 + 1
+avg_xyzpos=[];
+max_max_xyzpos=[];
+max_avg_xyzpos=[];
+final_xyzpos=[];
+for i=1:2*spacefeat
+    if i<=spacefeat
+        max_xyzpos=[max_xyzpos;max(abs(skespacexyzpos{i}-skespacexyzpos{spacefeat+1}))']; 
+        avg_xyzpos=[avg_xyzpos;mean(abs(skespacexyzpos{i}-skespacexyzpos{spacefeat+1}))']; 
+        max_max_xyzpos=[max_max_xyzpos;max(abs(skespacexyzpos{i}-skespacexyzpos{spacefeat+1}))];
+        max_avg_xyzpos=[max_avg_xyzpos;mean(abs(skespacexyzpos{i}-skespacexyzpos{spacefeat+1}))]; 
+
+    else
+        max_xyzpos=[max_xyzpos;max(abs(skespacexyzpos{i+1}-skespacexyzpos{spacefeat+1}))'];
+        avg_xyzpos=[avg_xyzpos;mean(abs(skespacexyzpos{i+1}-skespacexyzpos{spacefeat+1}))'];
+        max_max_xyzpos=[max_max_xyzpos;max(abs(skespacexyzpos{i+1}-skespacexyzpos{spacefeat+1}))];
+        max_avg_xyzpos=[max_avg_xyzpos;mean(abs(skespacexyzpos{i+1}-skespacexyzpos{spacefeat+1}))];
+    end
+end
+final_xyzpos=[max_xyzpos;max(max_max_xyzpos(1:spacefeat,:))';max(max_max_xyzpos(1+spacefeat:2*spacefeat,:))'; mean(max_max_xyzpos(1:spacefeat,:))';mean(max_max_xyzpos(1+spacefeat:2*spacefeat,:))';...
+              avg_xyzpos;max(max_avg_xyzpos(1:spacefeat,:))';max(max_avg_xyzpos(1+spacefeat:2*spacefeat,:))'; mean(max_avg_xyzpos(1:spacefeat,:))';mean(max_avg_xyzpos(1+spacefeat:2*spacefeat,:))'];
+
+%% feature xyz rotation angle
+max_xyzrot=[]; % rows: 3(X,YZ)xspacefeat*2   e.g.  3*6*2=36 + 36 + 1 +1 + 1 + 1
+avg_xyzrot=[];
+max_max_xyzrot=[];
+max_avg_xyzrot=[];
+final_xyzrot=[];
+for i=1:2*spacefeat
+    if i<=spacefeat
+        max_xyzrot=[max_xyzrot;max(abs(skespacexyzrot{i}-skespacexyzrot{spacefeat+1}))']; 
+        avg_xyzrot=[avg_xyzrot;mean(abs(skespacexyzrot{i}-skespacexyzrot{spacefeat+1}))']; 
+        max_max_xyzrot=[max_max_xyzrot;max(abs(skespacexyzrot{i}-skespacexyzrot{spacefeat+1}))];
+        max_avg_xyzrot=[max_avg_xyzrot;mean(abs(skespacexyzrot{i}-skespacexyzrot{spacefeat+1}))]; 
+
+    else
+        max_xyzrot=[max_xyzrot;max(abs(skespacexyzrot{i+1}-skespacexyzrot{spacefeat+1}))'];
+        avg_xyzrot=[avg_xyzrot;mean(abs(skespacexyzrot{i+1}-skespacexyzrot{spacefeat+1}))'];
+        max_max_xyzrot=[max_max_xyzrot;max(abs(skespacexyzrot{i+1}-skespacexyzrot{spacefeat+1}))];
+        max_avg_xyzrot=[max_avg_xyzrot;mean(abs(skespacexyzrot{i+1}-skespacexyzrot{spacefeat+1}))];
+    end
+end
+final_xyzrot=[max_xyzrot;max(max_max_xyzrot(1:spacefeat,:))';max(max_max_xyzrot(1+spacefeat:2*spacefeat,:))'; mean(max_max_xyzrot(1:spacefeat,:))';mean(max_max_xyzrot(1+spacefeat:2*spacefeat,:))';...
+              avg_xyzrot;max(max_avg_xyzrot(1:spacefeat,:))';max(max_avg_xyzrot(1+spacefeat:2*spacefeat,:))'; mean(max_avg_xyzrot(1:spacefeat,:))';mean(max_avg_xyzrot(1+spacefeat:2*spacefeat,:))'];
+          
+fina_xyz =[final_xyzpos;final_xyzrot];
+
+end

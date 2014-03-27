@@ -1,0 +1,22 @@
+%clear all; close all; clc;
+
+createConfiguration;
+
+% unzip all the samples
+%create_unzip_inputdata(config, 1, 0, 0);
+
+% generate input .mat file (including skeleton and label information)
+%create_mat_inputdata(config, 1, 0, 0);
+
+% generate input .mat file for training the gesture segmentations
+create_mat_segmentdata(config, 1, 0, 0);
+
+% train the gesture segmentation models
+train_mat_segmentdata(config);
+
+
+train_mat_segmentdata(config)
+
+
+% when training ISA  consider drop the depth patch that have many zero
+% depth points

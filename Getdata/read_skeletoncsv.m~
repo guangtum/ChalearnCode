@@ -1,0 +1,17 @@
+function gesturelabel = read_skeletoncsv(csvpath,framenum)    
+
+[fid,~] = fopen(csvpath); % csv file, only one line
+tline=fgetl(fid);
+count = 0;
+while ischar(tline)
+        count = count + 1;
+        readdata=str2num(tline);
+        Skeleton(count)=readdata;
+        tline=fgetl(fid);
+end
+fclose(fid);
+
+if count~=framenum
+    warning(['framenumber error in sample:' csvpath '(Gesture -> ' gid ')']);
+end
+end

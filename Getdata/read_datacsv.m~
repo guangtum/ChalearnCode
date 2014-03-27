@@ -1,0 +1,31 @@
+function [numf,numg,maxd] = read_datacsv(csvpath)    
+[fid,~] = fopen(csvpath); % csv file, only one line
+tline=fgetl(fid);
+
+ind = find(tline == ',', 1, 'last');
+if isempty(ind)
+    name = file;
+else
+    pathstr = file(1:ind-1); 
+    % Do not forget to add filesep when in the root filesystem
+    if isempty(deblank(pathstr))
+        pathstr = '/';
+    end
+    name = file(ind+1:end);
+end
+
+if isempty(ind)
+    warning(['Cannot read file: ' csvpath]);
+
+else
+    ext = name(ind:end);
+    name(ind:end) = [];
+end
+
+
+[numf,numg,maxd]= read_datacsv(csvpath);
+while ischar(tline)
+    disp(tline)
+    tline=fgetl(fid);
+end
+fclose(fid);

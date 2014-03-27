@@ -1,0 +1,6 @@
+function matfilename=print_matsegname(i,config)
+switch config.seg.featypes{i},
+    case 'smh'
+       matfilename= sprintf('seg_%s_%dx%dx%d_%s_%s.mat', config.seg.featypes{i}, length(config.seg.smh.classes),config.seg.smh.fspace,config.seg.smh.alin,config.seg.smh.featypes,config.seg.smh.pooling);
+end
+end
