@@ -246,7 +246,7 @@ config.rfdis3d.path.savellcfeatures=fullfile(config.chalearn2014path,'ChalearnFe
 % where to save the binary features for the training algorithm 
 config.rfdis3d.path.savebinfeatures=fullfile(config.chalearn2014path,'ChalearnFeature','binFeature');
 
-config.rfdis3d.path.savetreemodels=fullfile(config.chalearn2014path,'ChalearnModel','dt3DTrees');
+config.rfdis3d.path.savetreemodels=fullfile(config.chalearn2014path,'ChalearnModel','dtDis3D');
 
 
 % fusion stragety

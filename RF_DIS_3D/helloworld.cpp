@@ -48,7 +48,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     mexErrMsgTxt("Wrong number of inputs"); 
   if (nlhs != 0)
     mexErrMsgTxt("Wrong number of outputs");
-  timestamps= (double *)mxGetPr(prhs[2]);
+   timestamps= (double *)mxGetPr(prhs[2]);
   timest = (int)*timestamps;
   /* Check for proper input type */  
   if (!mxIsChar(prhs[0]) || (mxGetM(prhs[0]) != 1 ) )  {  

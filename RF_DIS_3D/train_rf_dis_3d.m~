@@ -45,7 +45,7 @@ createConfiguration;
 
 %% step 7
 timestamps = 3;
-dttrain_3d(binarypath,treepath,timestamps);
+dttrain_3d(binarypathc,treepath,timestamps);
 
 
 
