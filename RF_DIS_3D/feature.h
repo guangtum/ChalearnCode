@@ -29,6 +29,6 @@ void CopyVector(vector<T> &dst, vector<T> src)
 void GetViBinData(vector<SINGLEVIIM> &viVec, char *filename, PARAMETER params);
 void ReleaseViData(vector<SINGLEVIIM> &viVec);
 //void BgPrePooling(vector<SINGLEVIIM> &viVec, PARAMETER param);
-//void AdjustLabels(vector<SINGLEVIIM> &imVec, int &classNum);
+void AdjGesLabels(vector<SINGLEVIIM> &viVec, int &classNum);
 
 #endif

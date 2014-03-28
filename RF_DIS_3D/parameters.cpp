@@ -3,6 +3,7 @@
 
 void SetParameters(PARAMETER &params)
 {
+  params.timestamps = 1;
   params.treeNum = 100;  // the number of decision trees
   params.maxTreeDepth = 10;  // the maximum tree depth
   params.classNum = 20;  // the number of classes

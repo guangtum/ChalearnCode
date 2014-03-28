@@ -1,42 +1,38 @@
 #include <fstream>
+#include "math.h"
 #include "feature.h"
-//#include "nodeclassifier.h"
+#include "nodeclassifier.h"
 #include "mex.h"
 using namespace std;
 
-/*
-// adjust the class labels so that if they don't start from 0, make them start from 0
-void AdjustLabels(vector<SINGLEIM> &imVec, int &classNum)
-{
-  int minLabel = imVec[0].classLbl;
-  int maxLabel = imVec[0].classLbl;
-   int count = 0;
-  for (vector<SINGLEIM>::iterator imItr = imVec.begin(); imItr < imVec.end(); imItr++)
-  {
-    if (minLabel > imItr->classLbl)
-      minLabel = imItr->classLbl;
-    if (maxLabel < imItr->classLbl)
-      maxLabel = imItr->classLbl;
-    
-     count = count + 1;
-    
 
-  
-   
+// adjust the class labels so that if they don't start from 0, make them start from 0
+void AdjGesLabels(vector<SINGLEVIIM> &viVec, int &classNum)
+{
+  int minLabel = viVec[0].classLbl;
+  int maxLabel = viVec[0].classLbl;
+  int count = 0;
+  for (vector<SINGLEVIIM>::iterator viItr = viVec.begin(); viItr < viVec.end(); viItr++)
+  {
+    if (minLabel > viItr->classLbl)
+      minLabel = viItr->classLbl;
+    if (maxLabel < viItr->classLbl)
+      maxLabel = viItr->classLbl;
+    count = count + 1;
   }
 
   classNum = maxLabel - minLabel + 1;
   mexPrintf("   maxLabel: %d\t", maxLabel); 
   mexPrintf("   minLabel: %d\t", minLabel); 
-   mexPrintf("   classNum: %d\t", classNum); 
+  mexPrintf("   classNum: %d\t", classNum); 
   if (minLabel == 0)
     return;
-
-  for (vector<SINGLEIM>::iterator imItr = imVec.begin(); imItr < imVec.end(); imItr++)
-    imItr->classLbl -= minLabel;
+  mexPrintf("   Adjust Gesture Labels: orglabel - %d =  curlabel\n", minLabel); 
+  for (vector<SINGLEVIIM>::iterator viItr = viVec.begin(); viItr < viVec.end(); viItr++)
+    viItr->classLbl -= minLabel;
 }
 
-*/
+
 // Get Video data from the hard drive: each binary file includes a timestamps of all the video
 // Assume that we have 10 timestamps for each video, then we need to read 10 binary files
 void GetViBinData(vector<SINGLEVIIM> &viVec, char *filename, PARAMETER params)
@@ -46,7 +42,7 @@ void GetViBinData(vector<SINGLEVIIM> &viVec, char *filename, PARAMETER params)
   fin.read((char*)&gestNum, sizeof(int));
   
   //gestNum = 500;
-  mexPrintf("\n Gesture Number: %d\n", gestNum); 
+  mexPrintf("Gesture Number: %d\n", gestNum); 
   for (int i = 0; i < gestNum; i++)
   {
     SINGLEVIIM vi;
@@ -54,12 +50,21 @@ void GetViBinData(vector<SINGLEVIIM> &viVec, char *filename, PARAMETER params)
 	fin.read((char*)&vi.classLbl2, sizeof(int));
 
     
-    mexPrintf("lb %d;", vi.classLbl);
+    mexPrintf(" lb1 %d;", vi.classLbl);
+    mexPrintf(" lb2 %d;", vi.classLbl2);
+
     // read upper body gesture data
     fin.read((char*)&vi.ubWidth, sizeof(int));
     fin.read((char*)&vi.ubHeight, sizeof(int));
+    
+    vi.ubWidth= sqrt(vi.ubWidth);
+    vi.ubHeight= sqrt(vi.ubHeight);
+    
     viArea = vi.ubWidth * vi.ubHeight;
 
+    //mexPrintf(" ubwid %d;", vi.ubWidth);
+    //mexPrintf(" ubhgt %d;", vi.ubHeight);
+    
     vi.ubStartID = (int*)malloc(sizeof(int) * (viArea + 1));
     fin.read((char*)vi.ubStartID, sizeof(int) * (viArea + 1));
 

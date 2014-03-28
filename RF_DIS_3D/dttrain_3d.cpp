@@ -2,8 +2,8 @@
 #include <math.h>
 #include "feature.h"
 #include "parameters.h"
-//#include "decisiontree.h"
-//#include "treeaccessory.h"
+#include "decisiontree.h"
+#include "treeaccessory.h"
 #include "mex.h"
 
 // matlab entry point
@@ -40,21 +40,48 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   treefilepath= (char *)mxCalloc(tlen,sizeof(mxChar));
   treefilename= (char *)mxCalloc(tlen+100,sizeof(mxChar));
   
-  /* Copy the string data into pathname. */  
+  /* Read the path of binary files and set up path for trained trees. */  
   status = mxGetString(prhs[0], binfilepath, plen);    
   status = mxGetString(prhs[1], treefilepath, tlen);    
-
-  mexPrintf("Start getting data from the binary files.\n");
-    // set parameters for learning
+  
+  /* Set parameters for learning/training. */
   PARAMETER params;
   SetParameters(params);
+  params.timestamps = timest;
+  
+  /* Get data from the binary files. */  
+  mexPrintf("We have %d binary files.\n",params.timestamps);
+  mexPrintf("Start getting data from the binary files.\n");
   vector<SINGLEVIIM> viVec;
   for(index = 1; index <= timest; index++){ 
       sprintf(binfilename, "%s_%d.txt", binfilepath, index);
-      GetViBinData(viVec, binfilename, params);
       mexPrintf("Reading the binary file...%s\n",binfilename);
+      GetViBinData(viVec, binfilename, params);
+      mexPrintf("\n");
   }
   mexPrintf("Finish getting data from the binary files.\n");
+  
+  /* Convert the class labels from 1-based to 0-based */
+  int classNum;
+  AdjGesLabels(viVec, classNum);
+  
+  /* Add and pre-pooling the head region information, if it is necessary */
+  
+  /* Init the trees. (e.g. pre-allocated memory for all the trees)*/
+    mexPrintf("Start initializing all the trees.\n");
+  int treeMemSize = int(pow(2, params.maxTreeDepth + 1)) * params.treeNum;
+  TREENODE *treeMemory = new TREENODE[treeMemSize];
+  InitTreeMem(treeMemory, treeMemSize);
+  int treeMemID = 0; 
+  vector<TREENODE*> trees;  // the set of decision trees
+  for (int i = 0; i < params.treeNum; i++)
+  {
+    trees.push_back(treeMemory + treeMemID);
+    treeMemID++;
+  }
+  mexPrintf("Finish initializing all the trees.\n");
+  
+  
 /*
   // set parameters for learning
   PARAMETER param;
@@ -116,10 +143,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   free(valDist);
  */
   ReleaseViData(viVec);
-  /*
-  for (int i = 0; i < param.treeNum; i++)
+  
+  for (int i = 0; i < params.treeNum; i++)
     ReleaseTreeMem(trees[i]);
   delete[] treeMemory;
-  */
+  
  
 }

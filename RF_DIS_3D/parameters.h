@@ -3,6 +3,7 @@
 
 typedef struct _parameter
 {
+  int timestamps;
   int treeNum;
   int maxTreeDepth;
   int classNum;

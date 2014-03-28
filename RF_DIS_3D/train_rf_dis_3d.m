@@ -44,7 +44,7 @@ createConfiguration;
 [binarypath, treepath, timestamps]=creat_input_variable_4mex(config);
 
 %% step 7
-timestamps = 3;
+timestamps = 10;
 dttrain_3d(binarypath,treepath,timestamps);
 
 
