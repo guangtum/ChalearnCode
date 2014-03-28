@@ -1,43 +1,63 @@
-#include "mex.h"
-void revord(char *input,int len,char *output)
+# include <time.h>
+# include <mex.h>
+# include <string>
+#include<iostream>
+using namespace std;
+//using  std::string;
+// matlab entry point
+void GetData(string filenamein, char *treefilepath)
 {
-    int i;
-    for(i=0;i<len-1;i++)
-        *(output+i)=*(input+len-i-2);
+     string treepath;
+     string treefullpath;
+     treepath = string(treefilepath);
+     treefullpath = filenamein+treepath;
+     cout<<filenamein.c_str()<<'\n';
+     cout<<treefullpath.c_str()<<'\n';
+
 }
-void mexFunction(int nlhs,mxArray *plhs[],int nrhs,const mxArray *prhs[])
-{
-   
-    char *input_buf,*output_buf;
-    int buflen,status;
-    
-   
-    if(nrhs!=1)
-        mexErrMsgTxt("需要输入一个参数！");
-    else if(nrhs>1)
-        mexErrMsgTxt("你输入了太多的参数！");
-    
-   
-    if(mxIsChar(prhs[0])!=1)
-        mexErrMsgTxt("你输入的不是一个string类型的字符串！");
-    
-   
-    if(mxGetM(prhs[0])!=1)
-        mexErrMsgTxt("必须输入的一个行向量！");
-   
-   buflen=(mxGetM(prhs[0])*mxGetN(prhs[0]))+1;
-   
+void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  char *binfilepath;  
+  char *binfilename;
+  char *treefilepath;
+  string filename[20];
+  int plen; 
+  int tlen;  
+
+  double *timestamps;
+  int timest;
+  int status;
+  mwSize index;  
+  // Currently, we do not have any input or output
+  if (nrhs != 3)
+    mexErrMsgTxt("Wrong number of inputs"); 
+  if (nlhs != 0)
+    mexErrMsgTxt("Wrong number of outputs");
+  timestamps= (double *)mxGetPr(prhs[2]);
+  timest = (int)*timestamps;
+  /* Check for proper input type */  
+  if (!mxIsChar(prhs[0]) || (mxGetM(prhs[0]) != 1 ) )  {  
+    mexErrMsgTxt("Input argument must be a string.");  
+   }
+  plen = mxGetN(prhs[0])*sizeof(mxChar)+1; 
+  tlen = mxGetN(prhs[1])*sizeof(mxChar)+1; 
+
   
-   input_buf=mxCalloc(buflen,sizeof(char));
-   output_buf=mxCalloc(buflen,sizeof(char));
-  
-   status=mxGetString(prhs[0],input_buf,buflen);
-   if(status!=0)
-       mexWarnMsgTxt("没有足够的空间了！");
-  
-   revord(input_buf,buflen,output_buf);
-   
-  
-   plhs[0]=mxCreateString(output_buf);
-   return ;
+  binfilepath=(char *)mxCalloc(plen,sizeof(mxChar));
+  binfilename= (char *)mxCalloc(plen+7,sizeof(mxChar));
+  treefilepath= (char *)mxCalloc(tlen,sizeof(mxChar));
+
+  /* Copy the string data into buf. */  
+  status = mxGetString(prhs[0], binfilepath, plen);    
+  status = mxGetString(prhs[1], treefilepath, tlen);    
+  mexPrintf("tree path %s.\n",treefilepath);  
+
+  for(index = 1; index <= timest; index++){ 
+      sprintf(binfilename, "%s_%d.txt", binfilepath, index);
+      filename[index]=(string)binfilename;
+      GetData(filename[index],treefilepath);
+  }
+  mxFree(binfilepath);  
+  mxFree(binfilename);
+  mxFree(treefilepath);
+
 }

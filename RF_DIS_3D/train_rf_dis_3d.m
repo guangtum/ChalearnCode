@@ -34,10 +34,17 @@ createConfiguration;
 %out:
 %extract_traintest_llcfeature(config);
 
-%% step 6
+%% step 6 
 %int: .mat file; llc features;
 %out: .txt file;
 output_binaryFeature_4mex(config);
+%%% return: the tree path, the binary path, the number of the time windows
+
+%% step 6
+rf_dis_3d_train(binraypath,treepath,timewindows);
+
+
+
 
 % generate input .mat file
 generate_matinputfile(trainingpath, savefile, hi, name, testpath);
