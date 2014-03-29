@@ -1,23 +1,24 @@
 #include "treeaccessory.h"
+#include "unistd.h"
 #include "mex.h"
 #include <math.h>
 
 
 // iteratively outputting the tree nodes
-/*
+
 void OutputTreeNode(TREENODE *node, char *filename)
 {
   ofstream fout(filename, ios::app);
 
   fout << node->nodeID << " " << node->depth << " " << node->classNum << endl;
-  fout << node->ftrX << " " << node->ftrY << " " << node->ftrWid << " " << node->ftrHgt << endl;
-  fout << node->pmRegions.size() << endl;
-  for (int i = 0; i < node->pmRegions.size(); i++)
+  fout << node->ftrX << " " << node->ftrY <<" " << node->ftrT << " " << node->ftrWid << " " << node->ftrHgt << " " << node->ftrWin <<endl;
+  fout << node->pmCuboids.size() << endl;
+  for (int i = 0; i < node->pmCuboids.size(); i++)
   {
-    fout << node->pmRegions[i].x << " " << node->pmRegions[i].y << " " 
-        << node->pmRegions[i].wid << " " << node->pmRegions[i].hgt << "  ";
+    fout << node->pmCuboids[i].x << " " << node->pmCuboids[i].y << " " 
+        << node->pmCuboids[i].wid << " " << node->pmCuboids[i].hgt << "  ";
   }
-  if (node->pmRegions.size() != 0)
+  if (node->pmCuboids.size() != 0)
     fout << endl;
   fout << node->ftrDim << endl;
   float *weightPTR = node->ftrWeight;
@@ -62,7 +63,7 @@ void OutputTree(TREENODE *tree, char *filename)
   OutputTreeNode(tree, filename);
 }
 
-*/
+
 
 void InitTreeMem(TREENODE *nodes, int nodeNum)
 {
@@ -131,20 +132,20 @@ void ReleaseTreeMem(TREENODE *tree)
   tree->rchild = NULL;
 }
 
-/*
 
-void GetFilename(char *filename)
+
+void GetTreeFilename(char *treefilename, char *treefilepath)
 {
   char tmpName[1024];
   for (int i = 0; i < 1000; i++)
   {
-    sprintf(tmpName, "trees/tree_%d%d%d.txt", i / 100, (i % 100) / 10, i % 10);
+    sprintf(tmpName, "%s/tree_%d%d%d.txt", treefilepath, i / 100, (i % 100) / 10, i % 10);
     if (access(tmpName, F_OK) != -1)  // file exists
       continue;
     else                              // file does not exist
     {
-      sprintf(filename, "%s", tmpName);
-      ofstream fout(filename);
+      sprintf(treefilename, "%s", tmpName);
+      ofstream fout(treefilename);
       if (fout.fail())
         mexErrMsgTxt("Failed to create the file for outputing trees");
       fout.close();
@@ -152,7 +153,7 @@ void GetFilename(char *filename)
     }
   }
 }
-*/
+
 
 /*
 // check the filenames to see the number of trees

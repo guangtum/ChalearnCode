@@ -20,7 +20,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   char *binfilepath;  
   char *binfilename;
   char *treefilepath;
-  char *treefilename;
+  //char *treefilename;
   
   int plen; 
   int tlen;  
@@ -38,7 +38,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   binfilepath=(char *)mxCalloc(plen,sizeof(mxChar));
   binfilename= (char *)mxCalloc(plen+7,sizeof(mxChar));
   treefilepath= (char *)mxCalloc(tlen,sizeof(mxChar));
-  treefilename= (char *)mxCalloc(tlen+100,sizeof(mxChar));
+  //treefilename= (char *)mxCalloc(tlen+100,sizeof(mxChar));
   
   /* Read the path of binary files and set up path for trained trees. */  
   status = mxGetString(prhs[0], binfilepath, plen);    
@@ -62,9 +62,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   mexPrintf("Finish getting data from the binary files.\n");
   
   /* Convert the class labels from 1-based to 0-based */
+  
+  mexPrintf("Start converting the class labels from 1-based to 0-based.\n");
   int classNum;
   AdjGesLabels(viVec, classNum);
-  
+  mexPrintf("Finish converting the class labels from 1-based to 0-based.\n");
+
   /* Add and pre-pooling the head region information, if it is necessary */
   
   /* Init the trees. (e.g. pre-allocated memory for all the trees)*/
@@ -81,8 +84,34 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   }
   mexPrintf("Finish initializing all the trees.\n");
   
+  /* Train decision trees */ 
+  mexPrintf("Start training all the trees.\n");
+  clock_t t1, t2;
+  vector<int> trainID, valID;  // indicate which samples are included in the current tree node
+  char treefilename[1024];
+  float *valDist = (float*)malloc(sizeof(float) * classNum);  // sample distribution in the val set
+  for (int i = 0; i < params.treeNum; i++)
+  {
+    t1 = clock();
+    GetTreeFilename(treefilename, treefilepath);
+    mexPrintf("\nThe current tree will be in this file: %s\n", treefilename);
+    trainID.clear();
+    valID.clear();
+    InitializeTree(trees[i]);
+    int nodeID = 0;
+    memset(valDist, 0, sizeof(float) * classNum);
+///////////////////////////////////////////////////////////////////////////////////
+    TrainDecisionTree(trees[i], viVec, params, trainID, valID, 
+                      classNum, nodeID, treeMemory, treeMemID, valDist);
+///////////////////////////////////////////////////////////////////////////////////
+    OutputTree(trees[i], treefilename);
+    t2 = clock();
+    mexPrintf("\n    Time for trainning this tree: %f\n", (float)(t2 - t1) / CLOCKS_PER_SEC);
+  }
+  free(valDist);
+  mexPrintf("Finish training all the trees.\n");
   
-/*
+   /*
   // set parameters for learning
   PARAMETER param;
   SetParameters(param);

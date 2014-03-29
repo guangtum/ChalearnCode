@@ -10,7 +10,7 @@ void SetParameters(PARAMETER &params)
   params.minExampleNum = 40;  // the minimum number of examples in the node
   params.sampleEmpMethod = 0;  // the method to sample images for the root node;
                               // 0: sample "imageProportion" of the whole images, duplication is not allowed
-  params.imageProportion = 0.8;
+  params.gestureProportion = 0.8;
   params.sampleNumRoot = 300;
   params.sampleNumFirstLayer = 300;
   params.sampleNumRegular = 300;

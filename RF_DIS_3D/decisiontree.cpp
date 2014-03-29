@@ -3,47 +3,48 @@
 #include "decisiontree.h"
 //#include "linear.h"
 #include "mex.h"
-/*
-// initialize the root node of the tree
+
+//initialize the root node of the tree
 void InitializeTree(TREENODE *treeNode)
 {
   treeNode->nodeID = 0;
   treeNode->depth = 0;
 }
 
+/*
 
-
-void SwapLabels(vector<SINGLEIM> &imVec)
+void SwapLabels(vector<SINGLEVIIM> &viVec)
 {
-  for (vector<SINGLEIM>::iterator imPTR = imVec.begin(); imPTR < imVec.end(); imPTR++)
+  for (vector<SINGLEVIIM>::iterator viPTR = viVec.begin(); viPTR < viVec.end(); viPTR++)
   {
-    if (imPTR->classLbl2 == -1)
+    if (viPTR->classLbl2 == -1)
       continue;
 
     int flag = rand() % 2;
     if (flag == 0)
-      swap(imPTR->classLbl, imPTR->classLbl2);
+      swap(viPTR->classLbl, viPTR->classLbl2);
   }
 }
 
 
 
 // generate samples for the current tree, when we train the root node
-void GenerateSamples(vector<SINGLEIM> imVec, PARAMETER param,
+void GenerateSamples(vector<SINGLEVIIM> viVec, PARAMETER params,
     vector<int> &trainID, vector<int> &valID)
 {
   trainID.clear();
   valID.clear();
 
-  if (param.sampleEmpMethod == 0)
+  if (params.sampleEmpMethod == 0)
   {
     // sample "imageProportion" of the whole images, duplication is not allowed
     vector<int> tmpID;
-    int imageNum = imVec.size();
-    for (int i = 0; i < imageNum; i++)
+    //int gestureNum = viVec.size();
+    int gestureNum = viVec.size()/params.timestamps;
+    for (int i = 0; i < gestureNum; i++)
       tmpID.push_back(i);
 
-    int sampleNum = (int)(param.imageProportion * imageNum + 0.5);
+    int sampleNum = (int)(params.gestureProportion * gestureNum + 0.5);
     int sampleID;
     for (int i = 0; i < sampleNum; i++)
     {
@@ -54,71 +55,6 @@ void GenerateSamples(vector<SINGLEIM> imVec, PARAMETER param,
 
     for (vector<int>::iterator idPTR = tmpID.begin(); idPTR < tmpID.end(); idPTR++)
       valID.push_back(*idPTR);
-  }
-  else if (param.sampleEmpMethod == 1)
-  {
-    // sample the same number of examples for each class for training, duplication is not allowed
-    // calculate the number of images for training in each class
-    int *imageNum = (int*)malloc(sizeof(int) * param.classNum);
-    memset(imageNum, 0, sizeof(int) * param.classNum);
-    for (vector<SINGLEIM>::iterator imPTR = imVec.begin(); imPTR < imVec.end(); imPTR++)
-      *(imageNum + imPTR->classLbl) += 1;
-    
-    int sampleNumPerClass = (int)((imVec.size() / param.classNum) * param.imageProportion + 0.5);
-    for (int i = 0; i < param.classNum; i++)
-    {
-      if (imageNum[i] < sampleNumPerClass)
-        mexErrMsgTxt("The image proportion parameter is too large!");
-    } 
-    free(imageNum);
-
-    vector<int> tmpID;
-    for (int i = 0; i < param.classNum; i++)
-    {
-      // for each class ...
-      tmpID.clear();  // the ID of the images whose label is "i" will be in "tmpID"
-      int count = 0;
-      for (vector<SINGLEIM>::iterator imPTR = imVec.begin(); imPTR < imVec.end(); imPTR++)
-      {
-        if (imPTR->classLbl == i)
-          tmpID.push_back(count);
-        count++;
-      }
-
-      int sampleID;
-      for (int j = 0; j < sampleNumPerClass; j++)
-      {
-        sampleID = rand() % tmpID.size();
-        trainID.push_back(tmpID[sampleID]);
-        tmpID.erase(tmpID.begin() + sampleID);
-      }
-
-      for (vector<int>::iterator idPTR = tmpID.begin(); idPTR < tmpID.end(); idPTR++)
-        valID.push_back(*idPTR);
-    }
-  }
-  else if (param.sampleEmpMethod == 2)
-  {
-    vector<int> tmpID;
-    int imageNum = imVec.size() / 2;
-    for (int i = 0; i < imageNum; i++)
-      tmpID.push_back(i);
-
-    int sampleNum = (int)(param.imageProportion * imageNum + 0.5);
-    int sampleID;
-    for (int i = 0; i < sampleNum; i++)
-    {
-      sampleID = rand() % tmpID.size();
-      trainID.push_back(tmpID[sampleID]);
-      trainID.push_back(tmpID[sampleID] + imageNum);  // this is the corresponding flipped image
-      tmpID.erase(tmpID.begin() + sampleID);
-    }
-
-    for (vector<int>::iterator idPTR = tmpID.begin(); idPTR < tmpID.end(); idPTR++)
-    {
-      valID.push_back(*idPTR);
-      valID.push_back(*idPTR + imageNum);
-    }
   }
   else
     mexErrMsgTxt("The specified method for sampling images has not been implemented yet!\n");
@@ -126,11 +62,11 @@ void GenerateSamples(vector<SINGLEIM> imVec, PARAMETER param,
 
 
 
-void GetValDist(vector<SINGLEIM> imVec, vector<int> valID, float *valDist, int classNum)
+void GetValDist(vector<SINGLEVIIM> viVec, vector<int> valID, float *valDist, int classNum)
 {
   memset(valDist, 0, sizeof(float) * classNum);
   for (vector<int>::iterator idPTR = valID.begin(); idPTR < valID.end(); idPTR++)
-    *(valDist + imVec[*idPTR].classLbl) += 1;
+    *(valDist + viVec[*idPTR].classLbl) += 1;
 
   float *valDistPTR = valDist;
   int valNum = valID.size();
@@ -144,12 +80,12 @@ void GetValDist(vector<SINGLEIM> imVec, vector<int> valID, float *valDist, int c
 
 
 // how many classes of examples that the current node still have?
-int GetUniqueClassNum(vector<SINGLEIM> imVec, vector<int> trainID, vector<int> &classID)
+int GetUniqueClassNum(vector<SINGLEVIIM> viVec, vector<int> trainID, vector<int> &classID)
 {
   // the classID of all the samples in the current node
   classID.clear();
   for (vector<int>::iterator idPTR = trainID.begin(); idPTR < trainID.end(); idPTR++)
-    classID.push_back(imVec[*idPTR].classLbl);
+    classID.push_back(viVec[*idPTR].classLbl);
 
   // deduplication
   for (vector<int>::iterator idPTR = classID.begin(); idPTR < classID.end(); idPTR++)
@@ -165,7 +101,7 @@ int GetUniqueClassNum(vector<SINGLEIM> imVec, vector<int> trainID, vector<int> &
 
 
 // get the distribution of the samples for the leaf node
-void GetLeafNodeDist(float *distribution, vector<SINGLEIM> imVec, vector<int> trainID, 
+void GetLeafNodeDist(float *distribution, vector<SINGLEVIIM> viVec, vector<int> trainID, 
     vector<int> valID, float *valDist, int classNum, char *leafDistExample)
 {
   memset(distribution, 0, sizeof(float) * classNum);
@@ -175,7 +111,7 @@ void GetLeafNodeDist(float *distribution, vector<SINGLEIM> imVec, vector<int> tr
     if (trainID.size() == 0)
       return;
     for (vector<int>::iterator idPTR = trainID.begin(); idPTR < trainID.end(); idPTR++)
-      *(distribution + imVec[*idPTR].classLbl) += 1;
+      *(distribution + viVec[*idPTR].classLbl) += 1;
     for (int i = 0; i < classNum; i++)
       distribution[i] /= trainID.size();
   }
@@ -184,7 +120,7 @@ void GetLeafNodeDist(float *distribution, vector<SINGLEIM> imVec, vector<int> tr
     if (valID.size() == 0)
       return;
     for (vector<int>::iterator idPTR = valID.begin(); idPTR < valID.end(); idPTR++)
-      *(distribution + imVec[*idPTR].classLbl) += 1;
+      *(distribution + viVec[*idPTR].classLbl) += 1;
 
     float ttlValue = 0.0f;
     for (int i = 0; i < classNum; i++)  // normalize the distribution based on the
@@ -202,27 +138,27 @@ void GetLeafNodeDist(float *distribution, vector<SINGLEIM> imVec, vector<int> tr
     if (totalNum == 0)
       return;
     for (vector<int>::iterator idPTR = trainID.begin(); idPTR < trainID.end(); idPTR++)
-      *(distribution + imVec[*idPTR].classLbl) += 1;
+      *(distribution + viVec[*idPTR].classLbl) += 1;
     for (vector<int>::iterator idPTR = valID.begin(); idPTR < valID.end(); idPTR++)
-      *(distribution + imVec[*idPTR].classLbl) += 1;
+      *(distribution + viVec[*idPTR].classLbl) += 1;
     for (int i = 0; i < classNum; i++)
       distribution[i] /= totalNum;
   }
   else
-    mexErrMsgTxt("Invalid param.leafDistExample\n");
+    mexErrMsgTxt("Invalid params.leafDistExample\n");
 }
 
 
 
-void GetCurrentClassID(vector<SINGLEIM> imVec, vector<int> trainID, 
+void GetCurrentClassID(vector<SINGLEVIIM> viVec, vector<int> trainID, 
     vector<int> &classID, int classNum)
 {
   classID.clear();
   for (int i = 0; i < classNum; i++)
   {
-    for (vector<int>::iterator imPTR = trainID.begin(); imPTR < trainID.end(); imPTR++)
+    for (vector<int>::iterator viPTR = trainID.begin(); viPTR < trainID.end(); viPTR++)
     {
-      if (imVec[*imPTR].classLbl == i)
+      if (viVec[*viPTR].classLbl == i)
       {
         classID.push_back(i);
         break;
@@ -235,7 +171,7 @@ void GetCurrentClassID(vector<SINGLEIM> imVec, vector<int> trainID,
 
 // randomly split the training classes into two subclasses;
 // the two subclasses are indicated by vector trainClassID
-void BinarizeLabel(vector<int> classID, vector<SINGLEIM> imVec, vector<int> trainID,
+void BinarizeLabel(vector<int> classID, vector<SINGLEVIIM> viVec, vector<int> trainID,
     vector<int> &trainClassID, vector<int> valID, vector<int> &valClassID)
 {
   // initialize all trainClassID values to "-1"
@@ -261,16 +197,16 @@ void BinarizeLabel(vector<int> classID, vector<SINGLEIM> imVec, vector<int> trai
     classID.erase(classID.begin() + ID);
 
     int j = 0;
-    for (vector<int>::iterator imPTR = trainID.begin(); imPTR < trainID.end(); imPTR++)
+    for (vector<int>::iterator viPTR = trainID.begin(); viPTR < trainID.end(); viPTR++)
     {
-      if (imVec[*imPTR].classLbl == label)
+      if (viVec[*viPTR].classLbl == label)
         trainClassID[j] = 0;
       j++;
     }
     j = 0;
-    for (vector<int>::iterator imPTR = valID.begin(); imPTR < valID.end(); imPTR++)
+    for (vector<int>::iterator viPTR = valID.begin(); viPTR < valID.end(); viPTR++)
     {
-      if (imVec[*imPTR].classLbl == label)
+      if (viVec[*viPTR].classLbl == label)
         valClassID[j] = 0;
       j++;
     }
@@ -282,16 +218,16 @@ void BinarizeLabel(vector<int> classID, vector<SINGLEIM> imVec, vector<int> trai
     int label = classID[i];
 
     int j = 0;
-    for (vector<int>::iterator imPTR = trainID.begin(); imPTR < trainID.end(); imPTR++)
+    for (vector<int>::iterator viPTR = trainID.begin(); viPTR < trainID.end(); viPTR++)
     {
-      if (imVec[*imPTR].classLbl == label)
+      if (viVec[*viPTR].classLbl == label)
         trainClassID[j] = 1;
       j++;
     }
     j = 0;
-    for (vector<int>::iterator imPTR = valID.begin(); imPTR < valID.end(); imPTR++)
+    for (vector<int>::iterator viPTR = valID.begin(); viPTR < valID.end(); viPTR++)
     {
-      if (imVec[*imPTR].classLbl == label)
+      if (viVec[*viPTR].classLbl == label)
         valClassID[j] = 1;
       j++;
     }
@@ -304,8 +240,8 @@ void BinarizeLabel(vector<int> classID, vector<SINGLEIM> imVec, vector<int> trai
 // trainID stores the index of all the training examples for the current tree node.
 // valID stores the index of the examples that fall into the current tree node but not in the 
 //   training set. they are used to evaluate the performance of the sampled features.
-void TrainDecisionTree(TREENODE *treeNode, vector<SINGLEIM> imVec, 
-    PARAMETER param, vector<int> trainID, vector<int> valID, int classNum, 
+void TrainDecisionTree(TREENODE *treeNode, vector<SINGLEVIIM> viVec, 
+    PARAMETER params, vector<int> trainID, vector<int> valID, int classNum, 
     int &nodeID, TREENODE *treeMemory, int &treeMemID, float *valDist)
 {
   mexPrintf("  Training node: %d\n", nodeID);
@@ -315,28 +251,32 @@ void TrainDecisionTree(TREENODE *treeNode, vector<SINGLEIM> imVec,
   if (treeNode->depth == 0)
   {
     nodeID = 0;
-    SwapLabels(imVec);
-    GenerateSamples(imVec, param, trainID, valID);
-    GetValDist(imVec, valID, valDist, classNum);
+    SwapLabels(viVec);
+    GenerateSamples(viVec, params, trainID, valID);  //ok
+    GetValDist(viVec, valID, valDist, classNum); //ok
   }
 
   // if the current node is the leaf node, then exist
   vector<int> classID;
-  GetCurrentClassID(imVec, trainID, classID, classNum);
-  if ((treeNode->depth >= param.maxTreeDepth) || (trainID.size() <= param.minExampleNum)
+  GetCurrentClassID(viVec, trainID, classID, classNum);  //ok
+  if ((treeNode->depth >= params.maxTreeDepth) || (trainID.size() <= params.minExampleNum)
       || (classID.size() < 2))
   {
 //    mexPrintf("  Node %d is a leaf node\n", treeNode->nodeID);
     treeNode->ftrX = 0.0f;
     treeNode->ftrY = 0.0f;
+    treeNode->ftrT = 0.0f;
+
     treeNode->ftrWid = 0.0f;
     treeNode->ftrHgt = 0.0f;
-    treeNode->pmRegions.clear();
+    treeNode->ftrWin = 0.0f;
+
+    treeNode->pmCuboids.clear();
     treeNode->ftrDim = 0;
     treeNode->ftrWeight = NULL;
     treeNode->labelDist = (float*)malloc(sizeof(float) * classNum);
-    GetLeafNodeDist(treeNode->labelDist, imVec, trainID, valID, 
-        valDist, classNum, param.leafDistExample);
+    GetLeafNodeDist(treeNode->labelDist, viVec, trainID, valID, 
+        valDist, classNum, params.leafDistExample); //ok
     treeNode->lchild = NULL;
     treeNode->rchild = NULL;
     treeNode->lchildID = -1;
@@ -351,40 +291,44 @@ void TrainDecisionTree(TREENODE *treeNode, vector<SINGLEIM> imVec,
   //   otherClassID is set to -1 if the class label is not in classID.
   vector<int> trainClassID;
   vector<int> valClassID;
-  BinarizeLabel(classID, imVec, trainID, trainClassID, valID, valClassID);
+  BinarizeLabel(classID, viVec, trainID, trainClassID, valID, valClassID); //ok
   classID.clear();
 
   int sampleNum;
   if (treeNode->depth == 0)
-    sampleNum = param.sampleNumRoot;
+    sampleNum = params.sampleNumRoot;
   else if (treeNode->depth == 1)
-    sampleNum = param.sampleNumFirstLayer;
+    sampleNum = params.sampleNumFirstLayer;
   else
-    sampleNum = param.sampleNumRegular;
+    sampleNum = params.sampleNumRegular;
 
   // for the current node, sample a number
   float infoGain = 0.0f, maxInfoGain = -99.9f;
-  float ftrX, ftrY, ftrWid, ftrHgt;
+  float ftrX, ftrY, ftrT, ftrWid, ftrHgt, ftrWin;
   int ftrDim;
-  vector<PMREGION> regions;
+  vector<PMCUBOID> cuboids;
   float *ftrWeight, *bestFtrWeight;
-  ftrWeight = (float*)malloc(sizeof(float) * (100 * param.siftCodebookSize + 1)); // 65=(1+4+16)*2
-  bestFtrWeight = (float*)malloc(sizeof(float) * (100 * param.siftCodebookSize + 1));
+  ftrWeight = (float*)malloc(sizeof(float) * (100 * params.isaCodebookSize + 1)); // 65=(1+4+16)*2
+  bestFtrWeight = (float*)malloc(sizeof(float) * (100 * params.isaCodebookSize + 1));
   vector<int> leftTrainID, rightTrainID, bestLeftTrainID, bestRightTrainID;
   vector<int> leftValID, rightValID, bestLeftValID, bestRightValID;
 
   for (int i = 0; i < sampleNum; i++)
   {
-    ftrWid = (float)rand() * (1 - param.minRegionSize) / (float)RAND_MAX + param.minRegionSize;
-    ftrHgt = (float)rand() * (1 - param.minRegionSize) / (float)RAND_MAX + param.minRegionSize;
+    ftrWid = (float)rand() * (1 - params.minCuboidSize) / (float)RAND_MAX + params.minCuboidSize;
+    ftrHgt = (float)rand() * (1 - params.minCuboidSize) / (float)RAND_MAX + params.minCuboidSize;
+    ftrWin = (float)rand() * (1 - params.minCuboidTime) / (float)RAND_MAX + params.minCuboidTime;
+
     ftrX = (float)rand() * (1 - ftrWid) / (float)RAND_MAX;
     ftrY = (float)rand() * (1 - ftrHgt) / (float)RAND_MAX;
+    ftrT = (float)rand() * (1 - ftrWin) / (float)RAND_MAX;
+
 
     // "imID" and "otherID" are indications of the examples.
     // "trainClassID" and "otherClassID" are binary label assignments for those examples.
-    infoGain = TrainCurrentRegion(ftrX, ftrY, ftrWid, ftrHgt, ftrDim, 
-        ftrWeight, imVec, trainClassID, trainID, valClassID, valID, 
-        param, leftTrainID, rightTrainID, leftValID, rightValID, regions);
+    infoGain = TrainCurrentCuboid(ftrX, ftrY, ftrT, ftrWid, ftrHgt, ftrWin, ftrDim, 
+        ftrWeight, viVec, trainClassID, trainID, valClassID, valID, 
+        params, leftTrainID, rightTrainID, leftValID, rightValID, cuboids);
 
     if (infoGain > maxInfoGain)
     {
@@ -393,10 +337,14 @@ void TrainDecisionTree(TREENODE *treeNode, vector<SINGLEIM> imVec,
       maxInfoGain = infoGain;
       treeNode->ftrX = ftrX;
       treeNode->ftrY = ftrY;
+      treeNode->ftrT = ftrT;
+
       treeNode->ftrWid = ftrWid;
       treeNode->ftrHgt = ftrHgt;
+      treeNode->ftrWin = ftrWin;
+
       treeNode->ftrDim = ftrDim;
-      CopyVector<PMREGION>(treeNode->pmRegions, regions);
+      CopyVector<PMCUBOID>(treeNode->PMCUBOIDs, cuboids);
       memcpy(bestFtrWeight, ftrWeight, sizeof(float) * ftrDim);
       CopyVector<int>(bestLeftTrainID, leftTrainID);
       CopyVector<int>(bestRightTrainID, rightTrainID);
@@ -404,12 +352,12 @@ void TrainDecisionTree(TREENODE *treeNode, vector<SINGLEIM> imVec,
       CopyVector<int>(bestRightValID, rightValID);
     }
 
-    if (maxInfoGain >= param.maxEntropy)
+    if (maxInfoGain >= params.maxEntropy)
       break;
   }
 
   // do the fine tuning
-  if ((param.fineTuning == 1) && (maxInfoGain < param.maxEntropy))
+  if ((params.fineTuning == 1) && (maxInfoGain < params.maxEntropy))
   {
     float tmpFtrX = treeNode->ftrX;
     float tmpFtrY = treeNode->ftrY;
@@ -425,19 +373,21 @@ void TrainDecisionTree(TREENODE *treeNode, vector<SINGLEIM> imVec,
             || (ftrY < 0) || (ftrY + treeNode->ftrHgt > 1))
           continue;
 
-        infoGain = TrainCurrentRegion(ftrX, ftrY, treeNode->ftrWid, treeNode->ftrHgt, 
-            ftrDim, ftrWeight, imVec, trainClassID, trainID, valClassID, valID,
+        infoGain = TrainCurrentCuboid(ftrX, ftrY, treeNode->ftrWid, treeNode->ftrHgt, 
+            ftrDim, ftrWeight, viVec, trainClassID, trainID, valClassID, valID,
             param, leftTrainID, rightTrainID, leftValID, rightValID, regions);
 
         if (infoGain > maxInfoGain)
         {
-          mexPrintf("    fine tuning: x = %f, y = %f, wid = %f, hgt = %f, infoGain = %f\n",
-              ftrX, ftrY, treeNode->ftrWid, treeNode->ftrHgt, infoGain);
+          mexPrintf("    fine tuning: x = %f, y = %f, t = %f, wid = %f, hgt = %f, win= %f, infoGain = %f\n",
+              ftrX, ftrY, ftrT, treeNode->ftrWid, treeNode->ftrHgt, treeNode->ftrWin, infoGain);
           maxInfoGain = infoGain;
           treeNode->ftrX = ftrX;
           treeNode->ftrY = ftrY;
+          treeNode->ftrT = ftrT;
+
           treeNode->ftrDim = ftrDim;
-          CopyVector<PMREGION>(treeNode->pmRegions, regions);
+          CopyVector<PMCUBOID>(treeNode->pmCuboids, regions);
           memcpy(bestFtrWeight, ftrWeight, sizeof(float) * ftrDim);
           CopyVector<int>(bestLeftTrainID, leftTrainID);
           CopyVector<int>(bestRightTrainID, rightTrainID);
@@ -461,7 +411,7 @@ void TrainDecisionTree(TREENODE *treeNode, vector<SINGLEIM> imVec,
   nodeID++;
   treeNode->lchild->nodeID = nodeID;
   treeNode->lchildID = nodeID;
-  TrainDecisionTree(treeNode->lchild, imVec, param, bestLeftTrainID,
+  TrainDecisionTree(treeNode->lchild, viVec, params, bestLeftTrainID,
       bestLeftValID, classNum, nodeID, treeMemory, treeMemID, valDist);
 
   // train the current node's right child
@@ -471,7 +421,7 @@ void TrainDecisionTree(TREENODE *treeNode, vector<SINGLEIM> imVec,
   nodeID++;
   treeNode->rchild->nodeID = nodeID;
   treeNode->rchildID = nodeID;
-  TrainDecisionTree(treeNode->rchild, imVec, param, bestRightTrainID,
+  TrainDecisionTree(treeNode->rchild, viVec, params, bestRightTrainID,
       bestRightValID, classNum, nodeID, treeMemory, treeMemID, valDist);
 
   trainClassID.clear();
@@ -491,7 +441,7 @@ void TrainDecisionTree(TREENODE *treeNode, vector<SINGLEIM> imVec,
 
 
 
-void DecisionTreeClassify(SINGLEIM image, TREENODE *treeNode, float *result, PARAMETER param)
+void DecisionTreeClassify(SINGLEVIIM image, TREENODE *treeNode, float *result, PARAMETER param)
 {
   if (treeNode->lchild == NULL)  // reaches the leaf node
   {
@@ -507,8 +457,8 @@ void DecisionTreeClassify(SINGLEIM image, TREENODE *treeNode, float *result, PAR
 
   // classify using the current tree node
   float *feature = (float*)malloc(sizeof(float) * treeNode->ftrDim);
-  MaxPooling(image, feature, treeNode->pmRegions, param, "fg");  // foreground feature
-  memcpy(feature + treeNode->pmRegions.size() * param.siftCodebookSize, 
+  MaxPooling(image, feature, treeNode->PMCUBOIDs, param, "fg");  // foreground feature
+  memcpy(feature + treeNode->PMCUBOIDs.size() * params.isaCodebookSize, 
       image.bgHist, sizeof(float) * image.bgFtrDim);
   *(feature + treeNode->ftrDim - 1) = 0.1f;
 
@@ -535,19 +485,19 @@ void DecisionTreeClassify(SINGLEIM image, TREENODE *treeNode, float *result, PAR
 
 // using the current decision tree to classify all images
 // the result will be added up to that in "result"
-void TestDecisionTree(vector<SINGLEIM> imVec, TREENODE *tree, float *result, PARAMETER param)
+void TestDecisionTree(vector<SINGLEVIIM> viVec, TREENODE *tree, float *result, PARAMETER param)
 {
   int classNum = tree->classNum;
   float *singleResult = (float*)malloc(sizeof(float) * classNum);
   float *resultPTR = result;
   int count = 0;
-  for (vector<SINGLEIM>::iterator imPTR = imVec.begin(); imPTR < imVec.end(); imPTR++)
+  for (vector<SINGLEVIIM>::iterator viPTR = viVec.begin(); viPTR < viVec.end(); viPTR++)
   {
     memset(singleResult, 0, sizeof(float) * classNum);
-    DecisionTreeClassify(*imPTR, tree, singleResult, param);
+    DecisionTreeClassify(*viPTR, tree, singleResult, param);
 
     for (int i = 0; i < classNum; i++)
-      *(resultPTR + i * imVec.size()) += *(singleResult + i);
+      *(resultPTR + i * viVec.size()) += *(singleResult + i);
     resultPTR++;
   }
   free(singleResult);

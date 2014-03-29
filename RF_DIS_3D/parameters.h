@@ -9,7 +9,7 @@ typedef struct _parameter
   int classNum;
   int minExampleNum;
   int sampleEmpMethod;
-  float imageProportion;
+  float gestureProportion;
   int sampleNumRoot;
   int sampleNumFirstLayer;
   int sampleNumRegular;

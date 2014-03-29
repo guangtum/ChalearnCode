@@ -13,7 +13,7 @@ void InputTree(TREENODE *tree, TREENODE *treeMemPTR, char *filename);
 //void ResetTreeMem(TREENODE *nodes, int nodeNum);
 void InitTreeMem(TREENODE *nodes, int nodeNum);
 void ReleaseTreeMem(TREENODE *tree);
-//void GetFilename(char *filename);
+void GetTreeFilename(char *treefilename, char *treefilepath);
 //int GetTreeNum();
 //void ReadTrees(vector<TREENODE*> &trees, TREENODE *treeMemory, int treeNum, PARAMETER param);
 
